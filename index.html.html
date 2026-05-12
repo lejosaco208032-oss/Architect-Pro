@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architect Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="bg-[#020617] text-white min-h-screen flex items-center justify-center p-6">
+    <div class="max-w-4xl w-full text-center">
+        <h1 class="text-6xl font-black italic mb-12 uppercase tracking-tighter">Architect <span class="text-cyan-400">Pro</span></h1>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <a href="mesero.html" class="bg-white/5 p-8 rounded-[2.5rem] border-b-4 border-cyan-500 hover:scale-105 transition-all flex flex-col items-center">
+                <i data-lucide="smartphone" class="text-cyan-400 mb-2"></i><span class="font-bold text-xs">MESERO</span>
+            </a>
+            <a href="cocina.html" class="bg-white/5 p-8 rounded-[2.5rem] border-b-4 border-orange-500 hover:scale-105 transition-all flex flex-col items-center">
+                <i data-lucide="utensils" class="text-orange-500 mb-2"></i><span class="font-bold text-xs">COCINA</span>
+            </a>
+            <a href="tv.html" class="bg-white/5 p-8 rounded-[2.5rem] border-b-4 border-purple-500 hover:scale-105 transition-all flex flex-col items-center">
+                <i data-lucide="tv" class="text-purple-500 mb-2"></i><span class="font-bold text-xs">TV</span>
+            </a>
+            <a href="admin.html" class="bg-white/5 p-8 rounded-[2.5rem] border-b-4 border-emerald-500 hover:scale-105 transition-all flex flex-col items-center">
+                <i data-lucide="settings" class="text-emerald-500 mb-2"></i><span class="font-bold text-xs">ADMIN</span>
+            </a>
+        </div>
+    </div>
+    <script>
+        lucide.createIcons();
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+    </script>
+</body>
+</html>

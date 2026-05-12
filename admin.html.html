@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Architect Pro | Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="bg-slate-950 text-white p-6" x-data="adminPanel()">
+    <header class="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
+        <h1 class="text-3xl font-black text-emerald-400 italic">ADMIN MASTER</h1>
+        <div class="flex gap-4 bg-white/5 p-2 rounded-xl">
+            <input type="password" x-model="ghToken" placeholder="GitHub Token" class="bg-transparent text-[10px] outline-none">
+            <input type="text" x-model="ghRepo" placeholder="usuario/repo" class="bg-transparent text-[10px] outline-none border-l border-white/10 pl-2">
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="bg-white/5 p-8 rounded-[2.5rem] border-t-8 border-cyan-500 h-fit">
+            <h3 class="font-black text-cyan-400 mb-6 uppercase italic text-sm">Nuevo Producto</h3>
+            <div class="space-y-4">
+                <input type="text" x-model="newItem.name" placeholder="Nombre del plato" class="w-full bg-black/40 p-3 rounded-xl outline-none border border-white/10">
+                <input type="number" x-model="newItem.price" placeholder="Precio ($)" class="w-full bg-black/40 p-3 rounded-xl outline-none border border-white/10">
+                
+                <div class="relative h-40 border-2 border-dashed border-white/10 rounded-2xl flex items-center justify-center overflow-hidden">
+                    <input type="file" @change="processImage" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                    <template x-if="!preview">
+                        <div class="text-center"><p class="text-[10px] font-bold text-slate-500">SELECCIONAR FOTO</p></div>
+                    </template>
+                    <template x-if="preview">
+                        <img :src="preview" class="w-full h-full object-cover">
+                    </template>
+                </div>
+
+                <button @click="saveProduct()" :disabled="loading" class="w-full bg-cyan-600 py-4 rounded-xl font-black uppercase text-xs">
+                    <span x-show="!loading">Guardar en GitHub</span>
+                    <span x-show="loading">Subiendo...</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="md:col-span-2 grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-for="p in menu" :key="p.id">
+                <div class="bg-white/5 p-4 rounded-3xl relative group">
+                    <img :src="p.image" class="w-full h-32 object-cover rounded-2xl mb-2">
+                    <p class="font-black text-xs uppercase" x-text="p.name"></p>
+                    <p class="text-cyan-400 font-mono text-sm" x-text="'$' + p.price"></p>
+                    <button @click="deleteProduct(p.id)" class="absolute top-2 right-2 bg-red-500 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script>
+        const bc = new BroadcastChannel('restaurant_sync');
+        function adminPanel() {
+            return {
+                menu: JSON.parse(localStorage.getItem('restaurant_menu')) || [],
+                newItem: { name: '', price: '', rawFile: null },
+                preview: '', loading: false,
+                ghToken: localStorage.getItem('gh_token') || '',
+                ghRepo: localStorage.getItem('gh_repo') || '',
+
+                processImage(e) {
+                    const file = e.target.files[0];
+                    if(!file) return;
+                    this.newItem.rawFile = file;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => this.preview = ev.target.result;
+                    reader.readAsDataURL(file);
+                },
+
+                async saveProduct() {
+                    if(!this.newItem.name || !this.ghToken) return alert("Faltan datos o Token");
+                    this.loading = true;
+                    
+                    const fileName = `img/${Date.now()}.png`;
+                    const base64Data = this.preview.split(',')[1];
+
+                    try {
+                        const res = await fetch(`https://api.github.com/repos/${this.ghRepo}/contents/${fileName}`, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `token ${this.ghToken}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message: "Add image", content: base64Data })
+                        });
+
+                        if(res.ok) {
+                            const imgUrl = `https://${this.ghRepo.split('/')[0]}.github.io/${this.ghRepo.split('/')[1]}/${fileName}`;
+                            const product = { id: Date.now(), name: this.newItem.name, price: this.newItem.price, image: imgUrl };
+                            this.menu.push(product);
+                            this.sync();
+                            this.newItem = { name: '', price: '', rawFile: null }; this.preview = '';
+                            alert("Sincronizado con GitHub");
+                        }
+                    } catch (e) { alert("Error de conexión"); }
+                    this.loading = false;
+                },
+                deleteProduct(id) { this.menu = this.menu.filter(p => p.id !== id); this.sync(); },
+                sync() {
+                    localStorage.setItem('restaurant_menu', JSON.stringify(this.menu));
+                    localStorage.setItem('gh_token', this.ghToken);
+                    localStorage.setItem('gh_repo', this.ghRepo);
+                    bc.postMessage({ type: 'SYNC_MENU', menu: this.menu });
+                }
+            }
+        }
+    </script>
+</body>
+</html>

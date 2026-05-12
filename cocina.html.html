@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cocina</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body class="bg-black text-white p-6" x-data="kitchenApp()">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <template x-for="o in orders" :key="o.id">
+            <div class="bg-white/5 p-6 rounded-[2.5rem] border-t-8 border-orange-500">
+                <div class="flex justify-between mb-4"><span class="text-4xl font-black" x-text="'MESA ' + o.table"></span></div>
+                <div class="space-y-2 mb-6">
+                    <template x-for="item in o.items"><p class="text-xl uppercase font-bold" x-text="item.name"></p></template>
+                </div>
+                <button @click="dispatch(o.id)" class="w-full bg-orange-600 py-4 rounded-2xl font-black">LISTO</button>
+            </div>
+        </template>
+    </div>
+    <script>
+        const bc = new BroadcastChannel('restaurant_sync');
+        function kitchenApp() {
+            return {
+                orders: [],
+                init() { bc.onmessage = (e) => { if(e.data.type === 'NEW_ORDER') this.orders.push(e.data.order); }; },
+                dispatch(id) { 
+                    this.orders = this.orders.filter(o => o.id !== id);
+                    bc.postMessage({ type: 'ORDER_READY', id }); 
+                }
+            }
+        }
+    </script>
+</body>
+</html>

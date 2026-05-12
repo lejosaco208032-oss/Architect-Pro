@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architect Pro | Mesero</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link rel="manifest" href="manifest.json">
+</head>
+<body class="bg-[#020617] text-white p-4" x-data="waiterApp()">
+    <div class="grid grid-cols-2 gap-4 mb-6">
+        <template x-for="t in tables">
+            <div @click="openTable(t)" :class="t.status === 'busy' ? 'border-orange-500' : 'border-emerald-500'" 
+                 class="bg-white/5 p-6 rounded-3xl border-b-4 text-center cursor-pointer">
+                <span class="text-3xl font-black block" x-text="t.number"></span>
+                <span class="text-[10px] font-bold uppercase opacity-50" x-text="t.status"></span>
+            </div>
+        </template>
+    </div>
+
+    <div x-show="activeTable" class="fixed inset-0 z-50 bg-[#020617] flex flex-col p-6">
+        <div class="flex justify-between mb-6">
+            <h2 class="text-2xl font-black italic uppercase">Mesa <span x-text="activeTable?.number"></span></h2>
+            <button @click="activeTable = null" class="text-red-500 font-bold">CERRAR</button>
+        </div>
+        <div class="grid grid-cols-1 gap-3 flex-1 overflow-y-auto">
+            <template x-for="p in menu">
+                <button @click="addToCart(p)" class="bg-white/5 p-3 rounded-2xl flex items-center gap-4">
+                    <img :src="p.image" class="w-16 h-16 rounded-xl object-cover">
+                    <div class="text-left"><p class="font-black text-xs" x-text="p.name"></p><p class="text-cyan-400" x-text="'$' + p.price"></p></div>
+                </button>
+            </template>
+        </div>
+        <div class="bg-white/10 p-6 rounded-3xl mt-4">
+            <button @click="sendOrder()" class="w-full bg-cyan-600 py-5 rounded-2xl font-black uppercase">Enviar a Cocina ($<span x-text="total()"></span>)</button>
+        </div>
+    </div>
+
+    <script>
+        const bc = new BroadcastChannel('restaurant_sync');
+        function waiterApp() {
+            return {
+                activeTable: null, cart: [],
+                tables: Array.from({length:6}, (_,i)=>({id:i+1, number:(i+1).toString().padStart(2,'0'), status:'Libre'})),
+                menu: JSON.parse(localStorage.getItem('restaurant_menu')) || [],
+                openTable(t) { this.activeTable = t; this.cart = []; },
+                addToCart(p) { this.cart.push(p); },
+                total() { return this.cart.reduce((s,i)=>s+Number(i.price), 0); },
+                sendOrder() {
+                    const order = { id: Date.now(), table: this.activeTable.number, items: [...this.cart], time: new Date().toLocaleTimeString() };
+                    bc.postMessage({ type: 'NEW_ORDER', order });
+                    this.activeTable.status = 'Ocupada';
+                    this.activeTable = null;
+                },
+                init() { bc.onmessage = (e) => { if(e.data.type === 'SYNC_MENU') this.menu = e.data.menu; }; }
+            }
+        }
+    </script>
+</body>
+</html>
